@@ -1,0 +1,180 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql" // hoặc postgresql, tùy bạn
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  Int            @id @default(autoincrement())
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  email               String         @unique
+  hash                String?
+  firstName           String?
+  lastName            String?
+  picture             String?        @default("https://res.cloudinary.com/dj9r2qksh/image/upload/v1740839376/newspaper_images/hhbo5chxdtudnaliaiqx.jpg")
+  provider            String?        @default("LOCAL")
+  providerId          String?
+  // Thông tin khách hàng (nullable vì user có thể chưa phải khách)
+  home_store          Int?
+  customer_since      DateTime?
+  loyalty_card_number String?
+  birthdate           DateTime?
+  gender              String? // ví dụ: "M", "F", "O"
+  birth_year          Int?
+  role                Role           @default(USER)
+  // Quan hệ
+  homeStore           Sale_Outlet?   @relation("StoreCustomers", fields: [home_store], references: [sales_outlet_id])
+  salesReceipts       SalesReceipt[]
+
+  @@map("users")
+}
+
+model Product {
+  product_id              Int                @id @default(autoincrement())
+  product_group           String?
+  product_category        String?
+  product_type            String?
+  product                 String?
+  product_description     String?
+  unit_of_measure         String?
+  current_wholesale_price Float?
+  current_retail_price    Float?
+  tax_exempt_yn           Boolean?
+  promo_yn                Boolean?
+  product_image_cover     Image?             @relation(fields: [imageId], references: [id])
+  new_product_yn          Boolean?
+  product_images          ProductImage[]
+  salesReceipts           SalesReceipt[]     @relation("ProductSales")
+  pastryInventories       Pastry_Inventory[]
+  imageId                 Int?
+}
+
+model Image {
+  id           Int            @id @default(autoincrement())
+  url          String         @default("https://res.cloudinary.com/dj9r2qksh/image/upload/v1748052303/coffee-6467644_1280_hhpgwj.jpg")
+  publicId     String
+  createdAt    DateTime       @default(now())
+  ProductImage ProductImage[]
+  Product      Product[]
+}
+
+model ProductImage {
+  product   Product @relation(fields: [productId], references: [product_id])
+  productId Int
+  image     Image   @relation(fields: [imageId], references: [id])
+  imageId   Int
+
+  @@id([productId, imageId]) // composite primary key
+}
+
+model Staff {
+  staff_id   Int      @id @default(autoincrement())
+  first_name String?
+  last_name  String?
+  position   String?
+  start_date DateTime @default(now())
+  location   String?
+
+  managedOutlets Sale_Outlet[]  @relation("ManagerOutlets")
+  salesReceipts  SalesReceipt[] @relation("StaffSales")
+}
+
+model Sale_Outlet {
+  sales_outlet_id      Int     @id @default(autoincrement())
+  sales_outlet_type    String?
+  store_square_feet    Int?
+  store_address        String?
+  store_city           String?
+  store_state_province String?
+  store_telephone      String?
+  store_postal_code    String?
+  store_longitude      Float?
+  store_latitude       Float?
+  manager_id           Int?
+
+  Neighorhood String
+
+  manager           Staff?             @relation("ManagerOutlets", fields: [manager_id], references: [staff_id])
+  salesTargets      Sales_Target[]
+  pastryInventories Pastry_Inventory[]
+  salesReceipts     SalesReceipt[]
+  customers         User[]             @relation("StoreCustomers")
+}
+
+model Sales_Target {
+  id               Int     @id @default(autoincrement())
+  sales_outlet_id  Int
+  year_month       String?
+  beans_goal       Int?
+  beverage_goal    Int?
+  food_goal        Int?
+  merchandise_goal Int     @map("merchandise _goal")
+  total_goal       Int?
+
+  salesOutlet Sale_Outlet @relation(fields: [sales_outlet_id], references: [sales_outlet_id])
+
+  @@map("Sales_Target")
+}
+
+model Pastry_Inventory {
+  id               Int      @id @default(autoincrement())
+  sales_outlet_id  Int
+  transaction_date DateTime @default(now())
+  product_id       Int
+  start_of_day     Int?
+  quantity_sold    Int?
+  waste            Int?
+  waste_percent    Float    @map("% waste")
+
+  salesOutlet Sale_Outlet @relation(fields: [sales_outlet_id], references: [sales_outlet_id])
+  product     Product     @relation(fields: [product_id], references: [product_id])
+
+  @@map("Pastry_Inventory")
+}
+
+model DateInfo {
+  id               Int      @id @default(autoincrement())
+  transaction_date DateTime @default(now())
+  week_id          Int
+  week_desc        String
+  month_id         Int
+  month_name       String
+  quarter_id       Int
+  quarter_name     String
+  year_id          Int
+
+  @@map("DateInfo")
+}
+
+model SalesReceipt {
+  transaction_id   Int      @id @default(autoincrement())
+  transaction_date DateTime
+  transaction_time DateTime
+  sales_outlet_id  Int
+  staff_id         Int
+  user_id          Int
+  instore_yn       Boolean
+  order            Int
+  line_item_id     Int
+  product_id       Int
+  quantity         Int
+  line_item_amount Float
+  unit_price       Float
+  promo_item_yn    Boolean
+
+  saleOutlet Sale_Outlet @relation(fields: [sales_outlet_id], references: [sales_outlet_id])
+  staff      Staff       @relation("StaffSales", fields: [staff_id], references: [staff_id])
+  user       User        @relation(fields: [user_id], references: [id])
+  product    Product     @relation("ProductSales", fields: [product_id], references: [product_id])
+
+  @@map("SalesReceipt")
+}
+
+enum Role {
+  USER
+  ADMIN
+}

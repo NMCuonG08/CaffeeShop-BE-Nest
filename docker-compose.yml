@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  test-db:
+    image: MYSQL:13
+    ports:
+      - "5434:5432"
+    environment:
+      MYSQL_USER: cuong
+      MYSQL_PASSWORD: 1108
+      MYSQL_DB: nest
+    networks:
+      - app-network
+
+networks:
+  app-network:
