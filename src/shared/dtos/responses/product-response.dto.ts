@@ -52,4 +52,8 @@ export class ProductResponseDto {
   @IsString()
   @IsOptional()
   product_image_cover?: string;
+
+  @IsNumber()
+  stock? : number
+
 }

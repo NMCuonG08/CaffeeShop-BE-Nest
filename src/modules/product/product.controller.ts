@@ -17,10 +17,11 @@ import { RolesGuard } from '../auth/guard/roles.guard';
 import { Roles } from '../auth/decorator/role.decorator';
 import { JWTGuard } from '../auth/guard';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { RedisService } from '@/shared/redis/redis.service';
 
 @Controller("product")
 export class ProductController {
-    constructor(private productService : ProductService) {}
+    constructor(private productService : ProductService, private readonly redisService : RedisService) {}
 
 
     @Get("/list")
@@ -33,19 +34,6 @@ export class ProductController {
 
             return this.productService.getAllProducts({ page, limit });
         }
-
-    @Get(":id")
-    async getProductById(
-        @Param("id", ParseIntPipe) id : number
-    ) : Promise<ProductResponseDto> {
-        
-        const product = await this.productService.getProductById(id);
-        if (!product) {
-            throw new NotFoundException("Product not found");
-        }
-        return product;
-    }
-
 
     @UseGuards(JWTGuard, RolesGuard)
     @Roles('ADMIN')
@@ -85,6 +73,61 @@ export class ProductController {
       @Param("id", ParseIntPipe) id : number,
     ){
         return this.productService.deleteProduct(id);
+    }
+
+    @Get("/cheapest")
+    async getCheapestProducts(
+      @Query('limit', new DefaultValuePipe(5), ParseIntPipe) limit: number,
+    ) {
+        limit = limit > 20 ? 20 : limit; // Max 20 items
+        const cacheKey = `cheapest_products_${limit}`;
+        try {
+            const cachedProducts = await this.redisService.get<ProductResponseDto[]>(cacheKey);
+            if (cachedProducts) {
+                console.log('🎯 Cache HIT - Returning from Redis');
+                return {
+                    products: cachedProducts,
+                    source: 'cache',
+                    timestamp: new Date().toISOString(),
+                    count: cachedProducts.length
+                };
+            }
+            console.log('💾 Cache MISS - Querying database');
+            const products = await this.productService.getCheapestProducts(limit);
+
+            // 3. Lưu vào Redis với TTL 5 phút (300 seconds)
+            await this.redisService.set(cacheKey, products, 300);
+
+            return {
+                products: products,
+                source: 'database',
+                timestamp: new Date().toISOString(),
+                count: products.length
+            };
+
+        } catch (error) {
+            console.error('❌ Error in getCheapestProducts:', error);
+            // Fallback to database if Redis fails
+            const products = await this.productService.getCheapestProducts(limit);
+            return {
+                products: products,
+                source: 'database_fallback',
+                timestamp: new Date().toISOString(),
+                count: products.length,
+                error: 'Cache unavailable'
+            };
+        }
+    }
+    @Get(":id")
+    async getProductById(
+      @Param("id", ParseIntPipe) id : number
+    ) : Promise<ProductResponseDto> {
+
+        const product = await this.productService.getProductById(id);
+        if (!product) {
+            throw new NotFoundException("Product not found");
+        }
+        return product;
     }
 
 

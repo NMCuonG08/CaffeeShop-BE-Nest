@@ -51,7 +51,8 @@ export class AuthService{
             user: {
                 id: user.id,
                 email: user.email,
-                role: user.role
+                role: user.role,
+                picture:user.picture
             },
             token: token
         }

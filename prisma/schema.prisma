@@ -51,6 +51,8 @@ model Product {
   salesReceipts           SalesReceipt[]     @relation("ProductSales")
   pastryInventories       Pastry_Inventory[]
   imageId                 Int?
+  stock                   Int                @default(10)
+  isActive                Boolean            @default(true)
 }
 
 model Image {

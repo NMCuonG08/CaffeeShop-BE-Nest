@@ -19,5 +19,7 @@ export function mapProductToResponse(
     promo_yn: product.promo_yn ?? undefined,
     new_product_yn: product.new_product_yn ?? undefined,
     product_image_cover: imageUrl ?? undefined,
+    stock: product.stock?? undefined,
   };
 }
+

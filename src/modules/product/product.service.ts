@@ -30,6 +30,11 @@ export class ProductService {
         const products = await this.prisma.product.findMany({
             skip: (page - 1) * limit,
             take: limit,
+          where: {
+              stock: {
+                gt: 0
+              }
+          },
           orderBy: {
             product_id: 'desc',
           },
@@ -52,7 +57,6 @@ export class ProductService {
         for (const img of images) {
             imageMap.set(img.id, img.url);
         }
-
         const result: ProductResponseDto[] = products.map((product) =>
           mapProductToResponse(product, product.imageId ? imageMap.get(product.imageId) : undefined)
         );
@@ -93,7 +97,7 @@ export class ProductService {
     }
 
 
-  async updateProduct(
+    async updateProduct(
     id: number,
     product: AddNewProductDto,
     file?: Express.Multer.File
@@ -176,8 +180,6 @@ export class ProductService {
 
   async  deleteProduct(id : number) {
         try {
-
-
           await this.prisma.$transaction(async (tx) => {
             const product = await this.prisma.product.findUnique({
               where: {
@@ -187,7 +189,6 @@ export class ProductService {
             if (!product) {
               return;
             }
-
             if(product.imageId){
               try {
                 await this.cloudinaryService.deleteImage(product.imageId);
@@ -200,13 +201,46 @@ export class ProductService {
                 product_id : id
               }
             })
-
           })
         }
         catch (error) {
             throw new InternalServerErrorException(error);
         }
     }
+  async getCheapestProducts(limit: number = 5): Promise< ProductResponseDto[]>{
+    try {
+      const products = await this.prisma.product.findMany({
+        take: limit,
+        orderBy: {
+          current_retail_price: 'asc',
+        },
+        where: {
+          stock: {
+            gt: 0, // Còn hàng
+          },
+        },
+        include: {
+          product_image_cover: {
+            select: {
+              url: true,
+            },
+          },
+        },
+      });
+
+      const result: ProductResponseDto[] = products.map((product) =>
+        mapProductToResponse(product, product.product_image_cover?.url)
+      );
+
+      return result
+
+    } catch (error) {
+      console.error('Error in getCheapestProducts:', error);
+      throw error;
+    }
+  }
 
 
 }
+
+

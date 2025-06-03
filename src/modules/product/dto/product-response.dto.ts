@@ -11,4 +11,5 @@ export class ProductResponseDto {
     tax_exempt_yn?: boolean | null;
     promo_yn?: boolean | null;
     new_product_yn?: boolean | null;
+    stock? : number | null;
 }

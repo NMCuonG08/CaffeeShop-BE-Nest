@@ -5,6 +5,7 @@ import { UserModule } from './modules/user/user.module';
 import { PrismaModule } from './shared/prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { ProductModule } from './modules/product/product.module';
+import { RedisModule } from './shared/redis/redis.module';
 
 @Module({
   imports: [
@@ -15,7 +16,10 @@ import { ProductModule } from './modules/product/product.module';
       AuthModule,
       UserModule,
       ProductModule,
-      PrismaModule],
+      PrismaModule,
+      RedisModule
+  ],
+
   controllers: [],
 })
 export class AppModule {}
