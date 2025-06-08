@@ -4,7 +4,7 @@ import {
     DefaultValuePipe, Delete,
     Get,
     NotFoundException,
-    Param,
+    Param, ParseEnumPipe,
     ParseIntPipe,
     Patch,
     Post,
@@ -18,6 +18,7 @@ import { Roles } from '../auth/decorator/role.decorator';
 import { JWTGuard } from '../auth/guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { RedisService } from '@/shared/redis/redis.service';
+import { ProductSortBy } from '@/shared/enums';
 
 @Controller("product")
 export class ProductController {
@@ -28,11 +29,15 @@ export class ProductController {
         async getAllProducts(
             @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
             @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
-            ) {
+            @Query('sortBy', new DefaultValuePipe(ProductSortBy.PRODUCT_ID), new ParseEnumPipe(ProductSortBy)) sortBy: ProductSortBy,
+            @Query('category', new DefaultValuePipe("")) category?: string,
+            @Query('priceRange') priceRange?: string,
+            @Query('search') search?: string,
+    ) {
 
             limit = limit > 100 ? 100 : limit;
 
-            return this.productService.getAllProducts({ page, limit });
+            return this.productService.getAllProducts({ page, limit,sortBy,category,priceRange,search });
         }
 
     @UseGuards(JWTGuard, RolesGuard)

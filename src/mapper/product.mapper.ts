@@ -1,5 +1,5 @@
-import { Product } from '@prisma/client';
-import { ProductResponseDto } from '../shared/dtos/responses/product-response.dto';
+import { Image, Product } from '@prisma/client';
+import { ProductResponseDto } from '@/shared/dtos/responses/product-response.dto';
 
 export function mapProductToResponse(
   product: Product,
@@ -21,5 +21,16 @@ export function mapProductToResponse(
     product_image_cover: imageUrl ?? undefined,
     stock: product.stock?? undefined,
   };
+}
+export function mapProductToResponseArray(
+  products: (Product & { product_image_cover: {
+      id: number;
+      url: string;
+    } | null;
+    })[]
+): ProductResponseDto[] {
+  return products.map(product =>
+    mapProductToResponse(product, product.product_image_cover?.url || undefined)
+  );
 }
 

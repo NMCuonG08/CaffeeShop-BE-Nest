@@ -29,7 +29,7 @@ export class RedisService implements OnModuleInit {
   }
 
   async setCache(key: string, value: any, ttl?: number): Promise<void> {
-    await this.cacheManager.set(key, value, ttl ? ttl * 1000 : undefined);
+    await this.cacheManager.set(key, value, ttl ? ttl * 1000 : 500);
   }
 
   async getCache<T>(key: string): Promise<T | null> {
@@ -39,7 +39,7 @@ export class RedisService implements OnModuleInit {
 
   // Standard cache methods
   async set(key: string, value: any, ttl?: number): Promise<void> {
-    await this.cacheManager.set(key, value, ttl ? ttl * 1000 : undefined);
+    await this.cacheManager.set(key, value, ttl ? ttl * 1000 : 500);
   }
 
   async get<T>(key: string): Promise<T | null> {
@@ -64,27 +64,31 @@ export class RedisService implements OnModuleInit {
   async mset(keyValuePairs: Array<[string, any]>, ttl?: number): Promise<void> {
     // Fix: mset one by one since cache-manager might not support batch mset with TTL
     for (const [key, value] of keyValuePairs) {
-      await this.cacheManager.set(key, value, ttl ? ttl * 1000 : undefined);
+      await this.cacheManager.set(key, value, ttl ? ttl * 1000 : 500);
     }
   }
 
   async clear(): Promise<void> {
-    await this.cacheManager.clear();
+    await this.cacheManager.reset();
   }
 
   async ttl(key: string): Promise<number> {
     try {
-      const result = await this.cacheManager.ttl(key);
-      return result ?? -1; // Return -1 if null/undefined
-    } catch (error) {
-      // Some cache managers don't support TTL
+      const store: any = (this.cacheManager as any).store;
+      if (store?.ttl) {
+        const result = await store.ttl(key);
+        return result ?? -1;
+      }
+      return -1;
+    } catch {
       return -1;
     }
   }
 
+
   // Wrapper method với auto-caching
   async wrap<T>(key: string, fn: () => Promise<T>, ttl?: number): Promise<T> {
-    return await this.cacheManager.wrap(key, fn, ttl ? ttl * 1000 : undefined);
+    return await this.cacheManager.wrap(key, fn, { ttl: ttl ?? 0  });
   }
 
   // Utility methods

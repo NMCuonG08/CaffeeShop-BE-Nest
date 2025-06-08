@@ -11,5 +11,13 @@ export class ResponseDto<T> {
     this.message = message;
     this.data = data;
   }
-  
 }
+
+export type SafeUser = {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  picture?: string;
+};
+

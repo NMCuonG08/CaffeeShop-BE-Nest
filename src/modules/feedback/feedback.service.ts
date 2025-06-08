@@ -10,6 +10,7 @@ export class FeedbackService {
 
   // Tạo feedback mới
   async create(createFeedbackInput: CreateFeedbackInput, userId: number): Promise<Feedback> {
+    console.log("id"+ userId);
     // Kiểm tra user đã feedback cho product này chưa
     const existingFeedback = await this.prisma.feedback.findUnique({
       where: {
@@ -26,7 +27,7 @@ export class FeedbackService {
 
     // Kiểm tra product có tồn tại không
     const product = await this.prisma.product.findUnique({
-      where: { id: createFeedbackInput.productId },
+      where: { product_id: createFeedbackInput.productId },
     });
 
     if (!product) {
@@ -36,6 +37,7 @@ export class FeedbackService {
     return this.prisma.feedback.create({
       data: {
         ...createFeedbackInput,
+        status:'APPROVED',
         userId,
       },
       include: {
@@ -60,10 +62,13 @@ export class FeedbackService {
     if (filters?.userId) where.userId = filters.userId;
     if (filters?.type) where.type = filters.type;
     if (filters?.status) where.status = filters.status;
-    if (filters?.minRating) where.rating = { gte: filters.minRating };
-    if (filters?.maxRating) {
-      where.rating = { ...where.rating, lte: filters.maxRating };
+
+    if (filters?.minRating || filters?.maxRating) {
+      where.rating = {};
+      if (filters.minRating) where.rating.gte = filters.minRating;
+      if (filters.maxRating) where.rating.lte = filters.maxRating;
     }
+
 
     return this.prisma.feedback.findMany({
       where,

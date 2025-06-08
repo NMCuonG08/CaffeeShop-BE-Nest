@@ -1,141 +1,117 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import { PrismaService } from "src/shared/prisma/prisma.service";
 import { AddNewProductDto, ProductResponseDto } from './dto';
-import { CloudinaryService } from '../../shared/cloudinary/cloudinary.service';
-import { mapProductToResponse } from '../../mapper/product.mapper';
+import { mapProductToResponse ,mapProductToResponseArray} from '@/mapper/product.mapper';
+import { ImageService } from '@/modules/image/image.service';
+import { ProductRepository } from '@/modules/product/product.repository';
+import { ProductSortBy } from '@/shared/enums';
 
 
 
-@Injectable({})
+@Injectable()
 export class ProductService {
-    constructor(private prisma : PrismaService, private readonly cloudinaryService: CloudinaryService) {}
+  constructor(
+    private readonly productRepository: ProductRepository,
+    private readonly imageService: ImageService
+  ) {}
 
-    async getProductById(id: number): Promise<ProductResponseDto | null> {
-        const product = await this.prisma.product.findUnique({
-            where: { product_id: id },
-        });
-        if (!product) return null;
-        const imageUrl = product.imageId
-          ? await this.cloudinaryService.getImageUrl(product.imageId)
-          : undefined;
-        return mapProductToResponse(product, imageUrl ?? undefined);
-    }
+  async getProductById(id: number): Promise<ProductResponseDto | null> {
+    const product = await this.productRepository.findById(id);
+    if (!product) return null;
 
+    const imageUrl = product.imageId
+      ? await this.imageService.getImageUrl(product.imageId)
+      : product.product_image_cover?.url;
 
+    return mapProductToResponse(product, imageUrl||undefined);
+  }
 
-    async getAllProducts({ page, limit, }: {
-        page: number;
-        limit: number;
-    }): Promise<{ products: ProductResponseDto[]; total: number }> {
-        const products = await this.prisma.product.findMany({
-            skip: (page - 1) * limit,
-            take: limit,
-          where: {
-              stock: {
-                gt: 0
-              }
+  async getAllProducts({ page, limit,sortBy,category,priceRange ,search}: {
+    page: number;
+    limit: number;
+    sortBy: ProductSortBy;
+    category?: string;
+    priceRange?: string;
+    search?: string;
+  }): Promise<{ products: ProductResponseDto[]; total: number }> {
+    const orderBy = this.mapSortEnumToPrisma(sortBy);
+    let priceFilter = {};
+
+    if (priceRange) {
+      const [min, max] = priceRange.split('-').map(Number);
+      if (!isNaN(min) && !isNaN(max)) {
+        priceFilter = {
+          current_retail_price: {
+            gte: min,
+            lte: max,
           },
-          orderBy: {
-            product_id: 'desc',
-          },
-        });
-
-        const total = await this.prisma.product.count();
-
-        // get all image id
-        const imageIds = Array.from(
-          new Set(products.map(p => p.imageId).filter(id => id !== null))
-        );
-
-        const images = await this.prisma.image.findMany({
-            where: {
-                id: { in: imageIds as number[] },
-            },
-        });
-
-        const imageMap = new Map<number, string>();
-        for (const img of images) {
-            imageMap.set(img.id, img.url);
-        }
-        const result: ProductResponseDto[] = products.map((product) =>
-          mapProductToResponse(product, product.imageId ? imageMap.get(product.imageId) : undefined)
-        );
-
-        return {
-            products: result,
-            total,
         };
+      }
+    }
+    const [products, total] = await Promise.all([
+      this.productRepository.findManyWithPagination(page, limit, orderBy,category,priceFilter,search),
+      this.productRepository.countInStock(category,priceFilter,search)
+    ]);
+
+    const result = mapProductToResponseArray(products);
+
+    return { products: result, total };
+  }
+
+  async addNewProduct(product: AddNewProductDto, file?: Express.Multer.File): Promise<any> {
+    let imageId: number | undefined;
+
+    // Upload image if provided
+    if (file) {
+      const uploadResult = await this.imageService.uploadImage(file);
+      imageId = uploadResult?.id;
     }
 
-    async addNewProduct(product: AddNewProductDto, file?: Express.Multer.File) {
-        let image_cover: number | undefined = undefined;
-
-        if (file) {
-            const uploaded = await this.cloudinaryService.uploadImage(file);
-            if (uploaded) {
-                image_cover = uploaded.id;
-            }
-        }
-
-        // Tạo object data cơ bản
-        const data: any = {
-            ...product,
-        };
-
-        // Nếu có image_cover thì thêm vào data
-        if (image_cover) {
-            data.product_image_cover = {
-                connect: { id: image_cover },
-            };
-        }
-
-        const newProduct = await this.prisma.product.create({
-            data: data,
-        });
-
-        return newProduct;
+    // Prepare data for creation
+    const data: any = { ...product };
+    if (imageId) {
+      data.product_image_cover = {
+        connect: { id: imageId }
+      };
     }
 
+    try {
+      return await this.productRepository.create(data);
+    } catch (error) {
+      // Cleanup uploaded image if product creation fails
+      if (imageId) {
+        await this.imageService.deleteImage(imageId);
+      }
+      throw new InternalServerErrorException('Failed to create product');
+    }
+  }
 
-    async updateProduct(
+  async updateProduct(
     id: number,
     product: AddNewProductDto,
     file?: Express.Multer.File
   ): Promise<ProductResponseDto> {
-    const thisProduct = await this.prisma.product.findUnique({
-      where: { product_id: id },
-    });
-
-    if (!thisProduct) {
+    const existingProduct = await this.productRepository.findById(id);
+    if (!existingProduct) {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
 
-    const oldImageId = thisProduct.imageId;
+    const oldImageId = existingProduct.imageId;
     let newImageId: number | undefined;
 
-    // 1. Upload ảnh mới nếu có
+    // Upload new image if provided
     if (file) {
-      try {
-        const uploaded = await this.cloudinaryService.uploadImage(file);
-        if (!uploaded?.id) {
-          throw new Error('Cloudinary upload failed');
-        }
-        newImageId = uploaded.id;
-      } catch (err) {
-        throw new InternalServerErrorException('Failed to upload image');
-      }
+      const uploadResult = await this.imageService.uploadImage(file);
+      newImageId = uploadResult?.id;
     }
 
-    // 2. Cập nhật DB trong transaction
+    // Update product in transaction
     try {
-      await this.prisma.$transaction(async (tx) => {
-        const updateData: any = {
-          ...product,
-        };
+      await this.productRepository.executeTransaction(async (tx) => {
+        const updateData: any = { ...product };
 
         if (newImageId) {
           updateData.product_image_cover = {
-            connect: { id: newImageId },
+            connect: { id: newImageId }
           };
         }
 
@@ -144,101 +120,85 @@ export class ProductService {
           data: updateData,
         });
       });
-    } catch (err) {
-      // Nếu lỗi, rollback + xoá ảnh mới nếu có
+    } catch (error) {
+      // Rollback: delete new image if transaction fails
       if (newImageId) {
-        try {
-          await this.cloudinaryService.deleteImage(newImageId);
-        } catch (e) {
-          console.warn('Rollback failed to delete new image:', e);
-        }
+        await this.imageService.deleteImage(newImageId);
       }
-      throw err;
+      throw new InternalServerErrorException('Failed to update product');
     }
 
-    // 3. Xóa ảnh cũ sau khi DB update thành công
+    // Clean up old image after successful update
     if (newImageId && oldImageId) {
-      try {
-        await this.cloudinaryService.deleteImage(oldImageId);
-      } catch (e) {
-        console.warn('Failed to delete old image from Cloudinary:', e);
-      }
+      await this.imageService.deleteImage(oldImageId);
     }
 
-    // 4. Trả về dữ liệu mới
-    const updatedProduct = await this.prisma.product.findUnique({
-      where: { product_id: id },
-    });
-
+    // Return updated product
+    const updatedProduct = await this.productRepository.findById(id);
     const imageUrl = updatedProduct?.imageId
-      ? await this.cloudinaryService.getImageUrl(updatedProduct.imageId)
-      : undefined;
+      ? await this.imageService.getImageUrl(updatedProduct.imageId)
+      : updatedProduct?.product_image_cover?.url;
 
-    return mapProductToResponse(updatedProduct!, imageUrl??undefined);
+    return mapProductToResponse(updatedProduct!, imageUrl||undefined);
   }
 
-
-  async  deleteProduct(id : number) {
-        try {
-          await this.prisma.$transaction(async (tx) => {
-            const product = await this.prisma.product.findUnique({
-              where: {
-                product_id : id
-              }
-            })
-            if (!product) {
-              return;
-            }
-            if(product.imageId){
-              try {
-                await this.cloudinaryService.deleteImage(product.imageId);
-              } catch (e) {
-                console.warn('Failed to delete old image from Cloudinary:', e);
-              }
-            }
-            await tx.product.delete({
-              where:{
-                product_id : id
-              }
-            })
-          })
-        }
-        catch (error) {
-            throw new InternalServerErrorException(error);
-        }
-    }
-  async getCheapestProducts(limit: number = 5): Promise< ProductResponseDto[]>{
+  async deleteProduct(id: number): Promise<void> {
     try {
-      const products = await this.prisma.product.findMany({
-        take: limit,
-        orderBy: {
-          current_retail_price: 'asc',
-        },
-        where: {
-          stock: {
-            gt: 0, // Còn hàng
-          },
-        },
-        include: {
-          product_image_cover: {
-            select: {
-              url: true,
-            },
-          },
-        },
+      await this.productRepository.executeTransaction(async (tx) => {
+        const product = await tx.product.findUnique({
+          where: { product_id: id }
+        });
+
+        if (!product) {
+          throw new NotFoundException(`Product with ID ${id} not found`);
+        }
+
+        // Delete product first
+        await tx.product.delete({
+          where: { product_id: id }
+        });
+
+        // Clean up image after successful deletion
+        if (product.imageId) {
+          await this.imageService.deleteImage(product.imageId);
+        }
       });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to delete product');
+    }
+  }
 
-      const result: ProductResponseDto[] = products.map((product) =>
-        mapProductToResponse(product, product.product_image_cover?.url)
-      );
-
-      return result
-
+  async getCheapestProducts(limit: number = 5): Promise<ProductResponseDto[]> {
+    try {
+      const products = await this.productRepository.findCheapest(limit);
+      return mapProductToResponseArray(products);
     } catch (error) {
       console.error('Error in getCheapestProducts:', error);
-      throw error;
+      throw new InternalServerErrorException('Failed to get cheapest products');
     }
   }
+
+  private  mapSortEnumToPrisma(sortBy: ProductSortBy): { [key: string]: 'asc' | 'desc' } {
+    switch (sortBy) {
+      case ProductSortBy.PRICE_ASC:
+        return { current_retail_price: 'asc' };
+      case ProductSortBy.PRICE_DESC:
+        return { current_retail_price: 'desc' };
+      case ProductSortBy.NAME_ASC:
+        return { product: 'asc' };
+      case ProductSortBy.NAME_DESC:
+        return { product: 'desc' };
+      case ProductSortBy.CREATED_AT:
+        return { created_at: 'desc' };
+      case ProductSortBy.PRODUCT_ID:
+      default:
+        return { product_id: 'desc' };
+    }
+  }
+
 
 
 }

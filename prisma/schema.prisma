@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql" // hoặc postgresql, tùy bạn
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -15,22 +15,81 @@ model User {
   hash                String?
   firstName           String?
   lastName            String?
-  picture             String?        @default("https://res.cloudinary.com/dj9r2qksh/image/upload/v1740839376/newspaper_images/hhbo5chxdtudnaliaiqx.jpg")
-  provider            String?        @default("LOCAL")
-  providerId          String?
-  // Thông tin khách hàng (nullable vì user có thể chưa phải khách)
   home_store          Int?
   customer_since      DateTime?
   loyalty_card_number String?
   birthdate           DateTime?
-  gender              String? // ví dụ: "M", "F", "O"
+  gender              String?
   birth_year          Int?
+  picture             String?        @default("https://res.cloudinary.com/dj9r2qksh/image/upload/v1740839376/newspaper_images/hhbo5chxdtudnaliaiqx.jpg")
+  provider            String?        @default("LOCAL")
+  providerId          String?
   role                Role           @default(USER)
-  // Quan hệ
+  Feedback            Feedback[]
+  salesreceipt        SalesReceipt[]
   homeStore           Sale_Outlet?   @relation("StoreCustomers", fields: [home_store], references: [sales_outlet_id])
-  salesReceipts       SalesReceipt[]
+  userInfos           UserInfo[]
+  orders              Order[]
 
+  @@index([home_store], map: "users_home_store_fkey")
   @@map("users")
+}
+
+model Feedback {
+  id        Int            @id @default(autoincrement())
+  content   String         @db.Text
+  rating    Int            @default(5)
+  type      FeedbackType   @default(REVIEW)
+  status    FeedbackStatus @default(PENDING)
+  userId    Int
+  productId Int
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  product   Product        @relation(fields: [productId], references: [product_id], onDelete: Cascade) // Fixed from id to product_id
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([productId])
+  @@index([userId])
+  @@index([rating])
+  @@index([createdAt])
+  @@map("feedbacks")
+}
+
+model DateInfo {
+  id               Int      @id @default(autoincrement())
+  transaction_date DateTime @default(now())
+  week_id          Int
+  week_desc        String
+  month_id         Int
+  month_name       String
+  quarter_id       Int
+  quarter_name     String
+  year_id          Int
+}
+
+model Image {
+  id           Int            @id @default(autoincrement())
+  url          String         @default("https://res.cloudinary.com/dj9r2qksh/image/upload/v1748052303/coffee-6467644_1280_hhpgwj.jpg")
+  publicId     String
+  createdAt    DateTime       @default(now())
+  product      Product[]
+  productimage ProductImage[]
+}
+
+model Pastry_Inventory {
+  id               Int         @id @default(autoincrement())
+  sales_outlet_id  Int
+  transaction_date DateTime    @default(now())
+  product_id       Int
+  start_of_day     Int?
+  quantity_sold    Int?
+  waste            Int?
+  product          Product     @relation(fields: [product_id], references: [product_id], map: "Pastry_Inventory_product_id_fkey")
+  sale_outlet      Sale_Outlet @relation(fields: [sales_outlet_id], references: [sales_outlet_id], map: "Pastry_Inventory_sales_outlet_id_fkey")
+
+  @@index([product_id], map: "Pastry_Inventory_product_id_fkey")
+  @@index([sales_outlet_id], map: "Pastry_Inventory_sales_outlet_id_fkey")
 }
 
 model Product {
@@ -45,48 +104,32 @@ model Product {
   current_retail_price    Float?
   tax_exempt_yn           Boolean?
   promo_yn                Boolean?
-  product_image_cover     Image?             @relation(fields: [imageId], references: [id])
   new_product_yn          Boolean?
-  product_images          ProductImage[]
-  salesReceipts           SalesReceipt[]     @relation("ProductSales")
-  pastryInventories       Pastry_Inventory[]
   imageId                 Int?
-  stock                   Int                @default(10)
   isActive                Boolean            @default(true)
-}
+  stock                   Int                @default(10)
+  Feedback                Feedback[]
+  pastry_inventory        Pastry_Inventory[]
+  product_image_cover     Image?             @relation(fields: [imageId], references: [id], map: "Product_imageId_fkey")
+  productimage            ProductImage[]
+  salesreceipt            SalesReceipt[]
+  orderItems              OrderItem[]
 
-model Image {
-  id           Int            @id @default(autoincrement())
-  url          String         @default("https://res.cloudinary.com/dj9r2qksh/image/upload/v1748052303/coffee-6467644_1280_hhpgwj.jpg")
-  publicId     String
-  createdAt    DateTime       @default(now())
-  ProductImage ProductImage[]
-  Product      Product[]
+  @@index([imageId], map: "Product_imageId_fkey")
 }
 
 model ProductImage {
-  product   Product @relation(fields: [productId], references: [product_id])
   productId Int
-  image     Image   @relation(fields: [imageId], references: [id])
   imageId   Int
+  image     Image   @relation(fields: [imageId], references: [id], map: "ProductImage_imageId_fkey")
+  product   Product @relation(fields: [productId], references: [product_id], map: "ProductImage_productId_fkey")
 
-  @@id([productId, imageId]) // composite primary key
-}
-
-model Staff {
-  staff_id   Int      @id @default(autoincrement())
-  first_name String?
-  last_name  String?
-  position   String?
-  start_date DateTime @default(now())
-  location   String?
-
-  managedOutlets Sale_Outlet[]  @relation("ManagerOutlets")
-  salesReceipts  SalesReceipt[] @relation("StaffSales")
+  @@id([productId, imageId])
+  @@index([imageId], map: "ProductImage_imageId_fkey")
 }
 
 model Sale_Outlet {
-  sales_outlet_id      Int     @id @default(autoincrement())
+  sales_outlet_id      Int                @id @default(autoincrement())
   sales_outlet_type    String?
   store_square_feet    Int?
   store_address        String?
@@ -97,63 +140,32 @@ model Sale_Outlet {
   store_longitude      Float?
   store_latitude       Float?
   manager_id           Int?
+  Neighorhood          String
+  pastry_inventory     Pastry_Inventory[]
+  staff                Staff?             @relation(fields: [manager_id], references: [staff_id], map: "Sale_Outlet_manager_id_fkey")
+  sales_target         sales_target[]
+  salesreceipt         SalesReceipt[]
+  customers            User[]             @relation("StoreCustomers")
 
-  Neighorhood String
-
-  manager           Staff?             @relation("ManagerOutlets", fields: [manager_id], references: [staff_id])
-  salesTargets      Sales_Target[]
-  pastryInventories Pastry_Inventory[]
-  salesReceipts     SalesReceipt[]
-  customers         User[]             @relation("StoreCustomers")
+  @@index([manager_id], map: "Sale_Outlet_manager_id_fkey")
 }
 
-model Sales_Target {
-  id               Int     @id @default(autoincrement())
-  sales_outlet_id  Int
-  year_month       String?
-  beans_goal       Int?
-  beverage_goal    Int?
-  food_goal        Int?
-  merchandise_goal Int     @map("merchandise _goal")
-  total_goal       Int?
+model sales_target {
+  id                Int         @id @default(autoincrement())
+  sales_outlet_id   Int
+  year_month        String?
+  beans_goal        Int?
+  beverage_goal     Int?
+  food_goal         Int?
+  merchandise__goal Int         @map("merchandise _goal")
+  total_goal        Int?
+  sale_outlet       Sale_Outlet @relation(fields: [sales_outlet_id], references: [sales_outlet_id], map: "Sales_Target_sales_outlet_id_fkey")
 
-  salesOutlet Sale_Outlet @relation(fields: [sales_outlet_id], references: [sales_outlet_id])
-
-  @@map("Sales_Target")
-}
-
-model Pastry_Inventory {
-  id               Int      @id @default(autoincrement())
-  sales_outlet_id  Int
-  transaction_date DateTime @default(now())
-  product_id       Int
-  start_of_day     Int?
-  quantity_sold    Int?
-  waste            Int?
-  waste_percent    Float    @map("% waste")
-
-  salesOutlet Sale_Outlet @relation(fields: [sales_outlet_id], references: [sales_outlet_id])
-  product     Product     @relation(fields: [product_id], references: [product_id])
-
-  @@map("Pastry_Inventory")
-}
-
-model DateInfo {
-  id               Int      @id @default(autoincrement())
-  transaction_date DateTime @default(now())
-  week_id          Int
-  week_desc        String
-  month_id         Int
-  month_name       String
-  quarter_id       Int
-  quarter_name     String
-  year_id          Int
-
-  @@map("DateInfo")
+  @@index([sales_outlet_id], map: "Sales_Target_sales_outlet_id_fkey")
 }
 
 model SalesReceipt {
-  transaction_id   Int      @id @default(autoincrement())
+  transaction_id   Int         @id @default(autoincrement())
   transaction_date DateTime
   transaction_time DateTime
   sales_outlet_id  Int
@@ -167,16 +179,85 @@ model SalesReceipt {
   line_item_amount Float
   unit_price       Float
   promo_item_yn    Boolean
+  product          Product     @relation(fields: [product_id], references: [product_id], map: "SalesReceipt_product_id_fkey")
+  sale_outlet      Sale_Outlet @relation(fields: [sales_outlet_id], references: [sales_outlet_id], map: "SalesReceipt_sales_outlet_id_fkey")
+  staff            Staff       @relation(fields: [staff_id], references: [staff_id], map: "SalesReceipt_staff_id_fkey")
+  users            User        @relation(fields: [user_id], references: [id], map: "SalesReceipt_user_id_fkey")
 
-  saleOutlet Sale_Outlet @relation(fields: [sales_outlet_id], references: [sales_outlet_id])
-  staff      Staff       @relation("StaffSales", fields: [staff_id], references: [staff_id])
-  user       User        @relation(fields: [user_id], references: [id])
-  product    Product     @relation("ProductSales", fields: [product_id], references: [product_id])
+  @@index([product_id], map: "SalesReceipt_product_id_fkey")
+  @@index([sales_outlet_id], map: "SalesReceipt_sales_outlet_id_fkey")
+  @@index([staff_id], map: "SalesReceipt_staff_id_fkey")
+  @@index([user_id], map: "SalesReceipt_user_id_fkey")
+}
 
-  @@map("SalesReceipt")
+model Staff {
+  staff_id     Int            @id @default(autoincrement())
+  first_name   String?
+  last_name    String?
+  position     String?
+  start_date   DateTime       @default(now())
+  location     String?
+  sale_outlet  Sale_Outlet[]
+  salesreceipt SalesReceipt[]
+}
+
+model UserInfo {
+  id       Int     @id @default(autoincrement())
+  fullName String
+  email    String
+  phone    String
+  city     String
+  district String
+  ward     String
+  address  String
+  notes    String?
+
+  userId Int?
+  user   User? @relation(fields: [userId], references: [id])
+
+  orders Order[]
+}
+
+model Order {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  totalAmount Int
+  status      String   @default("pending")
+
+  userId Int?
+  user   User? @relation(fields: [userId], references: [id])
+
+  userInfoId Int
+  userInfo   UserInfo @relation(fields: [userInfoId], references: [id])
+
+  items OrderItem[]
+}
+
+model OrderItem {
+  id      Int   @id @default(autoincrement())
+  orderId Int
+  order   Order @relation(fields: [orderId], references: [id])
+
+  productId Int
+  quantity  Int
+  product   Product? @relation(fields: [productId], references: [product_id])
 }
 
 enum Role {
   USER
   ADMIN
+}
+
+enum FeedbackType {
+  REVIEW
+  COMPLAINT
+  SUGGESTION
+  COMPLIMENT
+}
+
+enum FeedbackStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  HIDDEN
 }

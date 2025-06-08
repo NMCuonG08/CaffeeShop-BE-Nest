@@ -2,6 +2,7 @@ import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { ValidationPipe } from "@nestjs/common";
 import { setupSwagger } from './swagger';
+import { CustomWsAdapter } from '@/shared/libs/ws-custom.adapter';
 
 async function bootstrap() {
    const app = await NestFactory.create(AppModule, {
@@ -12,6 +13,8 @@ async function bootstrap() {
       allowedHeaders: ['Content-Type', 'Authorization']
     },
   });
+  app.useWebSocketAdapter(new CustomWsAdapter(app));
+
   app.useGlobalPipes(new ValidationPipe({
     transform: true, // <<== BẮT BUỘC để @Type hoạt động
   }));

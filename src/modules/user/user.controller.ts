@@ -10,7 +10,6 @@ export class UserController {
     @Get('me')
     getUser(@GetUser() user : User,
         @GetUser('id') id : number ){
-
         console.log({id});
         return user
     }

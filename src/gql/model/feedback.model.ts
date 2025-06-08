@@ -1,5 +1,7 @@
-import { ObjectType, Field, ID, Int, registerEnumType } from '@nestjs/graphql';
-import { FeedbackType, FeedbackStatus, User, Product } from '@prisma/client';
+import { ObjectType, Field, Int, registerEnumType } from '@nestjs/graphql';
+import { FeedbackType, FeedbackStatus} from '@prisma/client';
+import {Product} from './product.model';
+import {User} from './user.model';
 
 // Register enums cho GraphQL
 registerEnumType(FeedbackType, {
@@ -14,8 +16,8 @@ registerEnumType(FeedbackStatus, {
 
 @ObjectType()
 export class Feedback {
-  @Field(() => ID)
-  id: string;
+  @Field(() => Int)
+  id: number;
 
   @Field()
   content: string;
@@ -30,10 +32,10 @@ export class Feedback {
   status: FeedbackStatus;
 
   @Field()
-  userId: string;
+  userId: number;
 
   @Field()
-  productId: string;
+  productId: number;
 
   @Field()
   createdAt: Date;

@@ -1,0 +1,131 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type Product {
+  product_id: Float!
+  product_group: String!
+  product_category: String!
+  product_type: String!
+  product: String!
+  product_description: String!
+  unit_of_measure: String!
+  current_wholesale_price: Float!
+  current_retail_price: Float!
+  tax_exempt_yn: Boolean!
+  promo_yn: Boolean!
+  new_product_yn: Boolean!
+  product_image_cover: String!
+  feedbacks: [Feedback!]!
+  averageRating: Float
+  totalFeedbacks: Int!
+}
+
+type Feedback {
+  id: Int!
+  content: String!
+
+  """Rating từ 1-5 sao"""
+  rating: Int!
+  type: FeedbackType!
+  status: FeedbackStatus!
+  userId: Float!
+  productId: Float!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  user: User!
+  product: Product!
+}
+
+"""Loại feedback"""
+enum FeedbackType {
+  REVIEW
+  COMPLAINT
+  SUGGESTION
+  COMPLIMENT
+}
+
+"""Trạng thái feedback"""
+enum FeedbackStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  HIDDEN
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type User {
+  id: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  email: String!
+  hash: String
+  firstName: String
+  lastName: String
+  picture: String
+  provider: String
+  providerId: String
+  home_store: Int
+  customer_since: DateTime
+  loyalty_card_number: String
+  birthdate: DateTime
+  gender: String
+  birth_year: Int
+  role: Role!
+  feedbacks: [Feedback!]
+}
+
+"""User roles"""
+enum Role {
+  USER
+  ADMIN
+}
+
+type ProductImage {
+  productId: Int!
+  imageId: Int!
+  product: Product!
+  image: Image!
+}
+
+type Image {
+  id: Int!
+  url: String!
+  publicId: String!
+  createdAt: DateTime!
+  ProductImage: [ProductImage!]
+  Product: [Product!]
+}
+
+type Query {
+  feedbacks(productId: Float, userId: Float, type: String, status: String, minRating: Float, maxRating: Float): [Feedback!]!
+  feedback(id: Float!): Feedback!
+  feedbacksByProduct(productId: Float!): [Feedback!]!
+  myFeedbacks: [Feedback!]!
+}
+
+type Mutation {
+  createFeedback(createFeedbackInput: CreateFeedbackInput!): Feedback!
+  updateFeedback(id: Float!, updateFeedbackInput: UpdateFeedbackInput!): Feedback!
+  removeFeedback(id: Float!): Feedback!
+  approveFeedback(id: Float!): Feedback!
+  rejectFeedback(id: Float!): Feedback!
+}
+
+input CreateFeedbackInput {
+  content: String!
+  rating: Int!
+  type: FeedbackType! = REVIEW
+  productId: Float!
+}
+
+input UpdateFeedbackInput {
+  content: String
+  rating: Int
+  type: FeedbackType
+  status: FeedbackStatus
+}
