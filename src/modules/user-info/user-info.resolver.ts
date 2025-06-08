@@ -2,9 +2,9 @@ import { UserInfo } from '@/gql/model/user-info.model';
 import { Resolver, Query, Mutation, Args, Subscription, Int, ResolveField, Parent } from '@nestjs/graphql';
 import { UserInfoService } from '@/modules/user-info/user-info.service';
 import { CreateUserInfoInput } from '@/modules/user-info/dto/create-user-infor.input';
-import { Order } from '@/gql/model/order.model';
 import { User } from '@/gql/model';
 import { UserService } from '@/modules/user/user.service';
+import { UpdateUserInfoInput } from '@/modules/user-info/dto/update-user-infor.input';
 
 
 @Resolver(() => UserInfo)
@@ -28,7 +28,7 @@ export class UserInfoResolver {
   @Mutation(() => UserInfo, { nullable: true })
   async updateUserInfo(
     @Args('id', { type: () => Int }) id: number,
-    @Args('updateUserInfo') updateUserInfoInput: CreateUserInfoInput ): Promise<UserInfo> {
+    @Args('updateUserInfo') updateUserInfoInput: UpdateUserInfoInput ): Promise<UserInfo> {
     return this.userInfoService.update(id,updateUserInfoInput)
   }
 

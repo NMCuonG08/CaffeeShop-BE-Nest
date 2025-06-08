@@ -1,5 +1,4 @@
 import { ObjectType, Field, Int } from '@nestjs/graphql';
-import { Order } from '@/gql/model/order.model';
 import { Product } from '@/gql/model/product.model';
 
 @ObjectType()
@@ -8,18 +7,20 @@ export class OrderItem {
   id: number;
 
   @Field(() => Int)
-  quantity: number;
-
-  // Relations
-  @Field(() => Int)
   orderId: number;
-
-  @Field(() => Order)
-  order?: Order;
 
   @Field(() => Int)
   productId: number;
 
-  @Field(() => Product)
+  @Field(() => Int)
+  quantity: number;
+
+  @Field(() => Int)
+  unitPrice: number;
+
+  @Field(() => Int)
+  totalPrice: number;
+
+  @Field({ nullable: true })
   product?: Product;
 }

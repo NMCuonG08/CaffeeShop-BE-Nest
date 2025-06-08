@@ -224,20 +224,20 @@ model Order {
   totalAmount Int
   status      String   @default("pending")
 
-  userId Int?
-  user   User? @relation(fields: [userId], references: [id])
-
-  userInfoId Int
-  userInfo   UserInfo @relation(fields: [userInfoId], references: [id])
+  userId      Int?
+  user        User?       @relation(fields: [userId], references: [id])
+  paymentType PaymentType @default(COD)
+  userInfoId  Int
+  userInfo    UserInfo    @relation(fields: [userInfoId], references: [id])
 
   items OrderItem[]
 }
 
 model OrderItem {
-  id      Int   @id @default(autoincrement())
-  orderId Int
-  order   Order @relation(fields: [orderId], references: [id])
-
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  order     Order    @relation(fields: [orderId], references: [id])
+  unitPrice Float?
   productId Int
   quantity  Int
   product   Product? @relation(fields: [productId], references: [product_id])
@@ -253,6 +253,12 @@ enum FeedbackType {
   COMPLAINT
   SUGGESTION
   COMPLIMENT
+}
+
+enum PaymentType {
+  COD // Cash on Delivery
+  VNPAY
+  MOMO
 }
 
 enum FeedbackStatus {

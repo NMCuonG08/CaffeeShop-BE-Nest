@@ -1,34 +1,37 @@
-import { ObjectType, Field, Int } from '@nestjs/graphql';
+import { Field, Int, ObjectType } from '@nestjs/graphql';
+import { OrderItem } from '@/gql/model/order-item.model';
 import { User } from '@/gql/model/user.model';
 import { UserInfo } from '@/gql/model/user-info.model';
-import { OrderItem } from '@/gql/model/order-item.model';
-
 
 @ObjectType()
 export class Order {
   @Field(() => Int)
   id: number;
 
+  @Field()
+  createdAt: Date;
 
   @Field(() => Int)
-  totalAmount: number | null;
+  totalAmount: number;
 
-  @Field(() => String)
+  @Field()
   status: string;
 
-  // Relations
   @Field(() => Int, { nullable: true })
-  userId?: number | null;
+  userId?: number;
+
+  @Field(() => Int)
+  userInfoId: number;
+
+  @Field()
+  paymentType: string;
+
+  @Field(() => [OrderItem])
+  items: OrderItem[];
 
   @Field(() => User, { nullable: true })
   user?: User;
 
-  @Field(() => Int)
-  userInfoId?: number;
-
-  @Field(() => UserInfo)
+  @Field(() => UserInfo,{ nullable: true })
   userInfo?: UserInfo;
-
-  @Field(() => [OrderItem])
-  items?: OrderItem[];
 }

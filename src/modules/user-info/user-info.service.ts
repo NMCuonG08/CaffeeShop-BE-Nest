@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/shared/prisma';
 import { UserInfo } from '@prisma/client';
 import { CreateUserInfoInput } from '@/modules/user-info/dto/create-user-infor.input';
+import { UpdateUserInfoInput } from '@/modules/user-info/dto/update-user-infor.input';
 
 @Injectable()
 export class UserInfoService {
@@ -10,54 +11,62 @@ export class UserInfoService {
   }
 
   async findById(id : number) : Promise<UserInfo | null>{
-    return this.prismaService.userInfo.findUnique({
-      where: { id },
+    return this.prismaService.userInfo.findFirst({
+      where: {
+        userId: id
+      }
     })
   }
 
   async create(userInfo: CreateUserInfoInput): Promise<UserInfo> {
+    // Kiểm tra xem đã tồn tại userInfo với userId này chưa
     if (userInfo.userId) {
       const existing = await this.prismaService.userInfo.findFirst({
         where: { userId: userInfo.userId },
       });
+
       if (existing) {
-        return this.update(existing.id, userInfo);
+        // Cập nhật thông tin existing record
+        return this.prismaService.userInfo.update({
+          where: { id: existing.id },
+          data: userInfo,
+        });
       }
     }
+
+    // Tạo mới nếu chưa tồn tại
     return this.prismaService.userInfo.create({
       data: userInfo,
     });
   }
 
-  async update(id: number, userInfo: CreateUserInfoInput): Promise<UserInfo> {
-    const existing = await this.prismaService.userInfo.findUnique({
-      where: { id },
+  async update(userId: number, userInfo: UpdateUserInfoInput): Promise<UserInfo> {
+    // Lọc bỏ undefined values
+    const cleanData = Object.fromEntries(
+      Object.entries(userInfo).filter(([_, value]) => value !== undefined)
+    ) as any;
+
+    // Tìm record theo userId
+    const existing = await this.prismaService.userInfo.findFirst({
+      where: { userId },
     });
 
-    if (!existing && userInfo.userId) {
-      const byUser = await this.prismaService.userInfo.findFirst({
-        where: { userId: userInfo.userId },
-      });
-      if (byUser) {
-        // Nếu tìm được, update theo bản ghi đó
-        return this.prismaService.userInfo.update({
-          where: { id: byUser.id },
-          data: userInfo,
-        });
-      }
-      // Không có bản ghi => tạo mới
-      return this.prismaService.userInfo.create({
-        data: userInfo,
+    if (existing) {
+      // Nếu tìm thấy, update record đó
+      return this.prismaService.userInfo.update({
+        where: { id: existing.id },
+        data: cleanData,
       });
     }
 
-    // Nếu đã tồn tại, cập nhật bình thường
-    return this.prismaService.userInfo.update({
-      where: { id },
-      data: userInfo,
+    // Nếu không tìm thấy record nào, tạo mới
+    return this.prismaService.userInfo.create({
+      data: {
+        ...cleanData,
+        userId, // Đảm bảo userId được set
+      },
     });
   }
-
 
 
 }
