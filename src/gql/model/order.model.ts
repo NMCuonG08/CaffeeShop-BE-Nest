@@ -1,7 +1,6 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { OrderItem } from '@/gql/model/order-item.model';
 import { User } from '@/gql/model/user.model';
-import { UserInfo } from '@/gql/model/user-info.model';
 
 @ObjectType()
 export class Order {
@@ -20,9 +19,6 @@ export class Order {
   @Field(() => Int, { nullable: true })
   userId?: number;
 
-  @Field(() => Int)
-  userInfoId: number;
-
   @Field()
   paymentType: string;
 
@@ -32,6 +28,4 @@ export class Order {
   @Field(() => User, { nullable: true })
   user?: User;
 
-  @Field(() => UserInfo,{ nullable: true })
-  userInfo?: UserInfo;
 }

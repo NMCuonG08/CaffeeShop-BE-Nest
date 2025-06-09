@@ -1,4 +1,4 @@
-import { InputType, Field, Int, registerEnumType } from '@nestjs/graphql';
+import { InputType, Field, Int, registerEnumType, Float } from '@nestjs/graphql';
 import { IsNotEmpty, IsArray, IsOptional, IsEnum } from 'class-validator';
 import { PaymentType } from '@prisma/client';
 
@@ -17,17 +17,19 @@ export class OrderItemInput {
   @Field(() => Int)
   @IsNotEmpty()
   quantity: number;
+
+  @Field(() => Float)
+  @IsNotEmpty()
+  unitPrice: number;
+
 }
 
 @InputType()
 export class CreateOrderInput {
   @Field(() => Int, { nullable: true })
   @IsOptional()
-  userId?: number;
+  userId: number;
 
-  @Field(() => Int)
-  @IsNotEmpty()
-  userInfoId: number;
 
   @Field(() => PaymentType, { defaultValue: PaymentType.COD })
   @IsEnum(PaymentType)

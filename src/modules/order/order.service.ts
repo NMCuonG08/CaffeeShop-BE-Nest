@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 
 import { PrismaService } from '@/shared/prisma';
 import { CreateOrderInput } from '@/modules/order/dto/create-input.order.dto';
+import { OrderStatus } from '@/shared/types/order.type';
 
 @Injectable()
 export class OrderService {
@@ -23,7 +24,7 @@ export class OrderService {
         data: {
           ...orderData,
           totalAmount,
-          status: 'pending'
+          status: OrderStatus.PENDING
         }
       });
 
@@ -34,7 +35,8 @@ export class OrderService {
             data: {
               orderId: newOrder.id,
               productId: item.productId,
-              quantity: item.quantity
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
             }
           })
         )
@@ -55,8 +57,7 @@ export class OrderService {
         where: { id: newOrder.id },
         include: {
           items: { include: { product: true } },
-          user: true,
-          userInfo: true
+          user: true
         }
       });
     });
@@ -76,26 +77,56 @@ export class OrderService {
     if (userId) where.userId = userId;
     if (status) where.status = status;
 
-    return this.prisma.order.findMany({
+    const orders = await this.prisma.order.findMany({
       where,
       include: {
-        items: { include: { product: true } },
-        user: true,
-        userInfo: true
+        items: {
+          include: {
+            product: {
+              include: {
+                product_image_cover : true
+              }
+            }
+          }
+        },
+        user: {
+          include: {
+            userInfos: true
+          }
+        }
       },
       orderBy: { createdAt: 'desc' },
       take: limit,
       skip: offset
     });
+
+    return orders.map(order => {
+      const firstUserInfo = order.user?.userInfos?.[0] || null;
+
+      return {
+        ...order,
+        items: order.items.map(item => ({
+          ...item,
+          product: {
+            ...item.product,
+            image: item.product?.product_image_cover?.url || null
+          }
+        })),
+        user: {
+          ...order.user,
+          userInfo: firstUserInfo
+        }
+      };
+    });
   }
+
 
   async findOne(id: number) {
     const order = await this.prisma.order.findUnique({
-      where: { id },
+      where: { id: id },
       include: {
         items: { include: { product: true } },
-        user: true,
-        userInfo: true
+        user: { include: { userInfos: true } }
       }
     });
 
@@ -103,11 +134,21 @@ export class OrderService {
       throw new NotFoundException('Order not found');
     }
 
-    return order;
+    // Lấy userInfo đầu tiên nếu có
+    const firstUserInfo = order.user?.userInfos?.[0] || null;
+
+    return {
+      ...order,
+      user: {
+        ...order.user,
+        userInfo: firstUserInfo
+      }
+    };
   }
 
-  async updateStatus(id: number, status: string) {
-    const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+
+  async updateStatus(id: number, status: OrderStatus) {
+    const validStatuses = Object.values(OrderStatus);
 
     if (!validStatuses.includes(status)) {
       throw new BadRequestException('Invalid order status');
@@ -119,7 +160,6 @@ export class OrderService {
       include: {
         items: { include: { product: true } },
         user: true,
-        userInfo: true
       }
     });
 
@@ -137,7 +177,7 @@ export class OrderService {
         throw new NotFoundException('Order not found');
       }
 
-      if (order.status === 'cancelled') {
+      if (order.status === OrderStatus.CANCELLED) {
         throw new BadRequestException('Order already cancelled');
       }
 
@@ -158,11 +198,10 @@ export class OrderService {
       // Update status
       return tx.order.update({
         where: { id },
-        data: { status: 'cancelled' },
+        data: { status: OrderStatus.CANCELLED },
         include: {
           items: { include: { product: true } },
           user: true,
-          userInfo: true
         }
       });
     });
@@ -206,4 +245,32 @@ export class OrderService {
 
     return { totalAmount, itemsWithPrices };
   }
+
+  async getAllStatusNumber(id:number){
+    const grouped = await this.prisma.order.groupBy({
+      where: {
+        userId: id
+      },
+      by: ['status'],
+      _count: { status: true },
+    });
+    const orderStats = {
+      ALL: 0,
+      PENDING: 0,
+      CONFIRMED: 0,
+      PROCESSING: 0,
+      SHIPPING: 0,
+      DELIVERED: 0,
+      CANCELLED: 0
+    };
+    grouped.forEach(group => {
+      const status = group.status as keyof typeof orderStats;
+      if (orderStats[status] !== undefined) {
+        orderStats[status] = group._count.status;
+        orderStats.ALL += group._count.status;
+      }
+    });
+    return orderStats;
+  }
 }
+

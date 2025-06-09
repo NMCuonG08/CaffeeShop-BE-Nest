@@ -1,4 +1,4 @@
-import { ObjectType, Field, Int } from '@nestjs/graphql';
+import { ObjectType, Field, Int, Float } from '@nestjs/graphql';
 import { Product } from '@/gql/model/product.model';
 
 @ObjectType()
@@ -15,7 +15,7 @@ export class OrderItem {
   @Field(() => Int)
   quantity: number;
 
-  @Field(() => Int)
+  @Field(() => Float)
   unitPrice: number;
 
   @Field(() => Int)

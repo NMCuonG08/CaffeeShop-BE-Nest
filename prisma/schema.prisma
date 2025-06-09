@@ -214,21 +214,17 @@ model UserInfo {
 
   userId Int?
   user   User? @relation(fields: [userId], references: [id])
-
-  orders Order[]
 }
 
 model Order {
-  id          Int      @id @default(autoincrement())
-  createdAt   DateTime @default(now())
+  id          Int         @id @default(autoincrement())
+  createdAt   DateTime    @default(now())
   totalAmount Int
-  status      String   @default("pending")
+  status      OrderStatus @default(PENDING)
 
   userId      Int?
   user        User?       @relation(fields: [userId], references: [id])
   paymentType PaymentType @default(COD)
-  userInfoId  Int
-  userInfo    UserInfo    @relation(fields: [userInfoId], references: [id])
 
   items OrderItem[]
 }
@@ -246,6 +242,15 @@ model OrderItem {
 enum Role {
   USER
   ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPING
+  DELIVERED
+  CANCELLED
 }
 
 enum FeedbackType {
