@@ -1,3 +1,46 @@
+
+# Caffee Shop
+
+- This document provides a comprehensive overview of the Coffee Shop Backend system, a full-featured e-commerce platform built with NestJS. The system manages the complete coffee shop business operations including product catalog management, order processing, user authentication, and payment integration.
+
+- The backend serves as the foundation for coffee shop applications, providing both GraphQL and REST APIs for client applications. For detailed information about specific subsystems, 
+
+![image](https://github.com/user-attachments/assets/2ad5343a-5178-4c59-8cdf-35e57bc82173)
+
+## 🛠️ Tech Stack Overview
+
+| 🧰 Technology         | 📝 Purpose              | 📦 Key Packages |
+|----------------------|-------------------------|-----------------|
+| ![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=flat&logo=nestjs&logoColor=white) `NestJS` | Backend Framework      | `@nestjs/common`, `@nestjs/core` |
+| ![GraphQL](https://img.shields.io/badge/GraphQL-E10098?style=flat&logo=graphql&logoColor=white) `GraphQL` | Primary API Interface | `@nestjs/graphql`, `@apollo/server` |
+| ![Prisma](https://img.shields.io/badge/Prisma-2D3748?style=flat&logo=prisma&logoColor=white) `Prisma` | Database ORM          | `@prisma/client`, `prisma` |
+| ![Redis](https://img.shields.io/badge/Redis-DC382D?style=flat&logo=redis&logoColor=white) `Redis` | Caching Layer         | `ioredis`, `cache-manager-redis-yet` |
+| ![Auth](https://img.shields.io/badge/Auth-Security-blue?style=flat&logo=passport&logoColor=white) `Authentication` | Security | `@nestjs/jwt`, `passport`, `argon2` |
+| ![Cloudinary](https://img.shields.io/badge/Cloudinary-3448C5?style=flat&logo=cloudinary&logoColor=white) ![Google](https://img.shields.io/badge/Google-4285F4?style=flat&logo=google&logoColor=white) `External Integrations` | Third-party Services | `cloudinary`, `google-auth-library` |
+
+
+# GraphQL and REST API Layer
+
+![image](https://github.com/user-attachments/assets/96155aa0-620c-470f-865f-be1aac6825ea)
+
+# Data Flow and Integration Points
+## External Service Integration
+
+![image](https://github.com/user-attachments/assets/a0f23cee-261b-4fe4-9997-b4441786eb3b)
+
+
+# Development Workflow
+
+![image](https://github.com/user-attachments/assets/0357f7a3-6b80-43dd-abc4-86cbad4c7416)
+
+
+
+
+
+
+
+
+
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
