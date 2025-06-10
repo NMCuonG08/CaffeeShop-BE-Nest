@@ -2,7 +2,7 @@ import { Args, Context, Float, Int, Parent, ResolveField, Resolver } from '@nest
 import { Feedback, Product } from '@/gql/model';
 import { ProductService } from '@/modules/product/product.service';
 import { FeedbackService } from '@/modules/feedback/feedback.service';
-import DataLoader from 'dataloader';
+import * as DataLoader from 'dataloader';
 import { Query} from '@nestjs/graphql';
 import { ProductResponseDto } from '@/modules/product/dto';
 
@@ -33,6 +33,20 @@ export class ProductResolver {
     return stats.averageRating;
   }
 
+  @ResolveField(() => String, { nullable: true, name: 'image' })
+  async productImage(
+    @Parent() product: Product,
+    @Context() { productImage} : {productImage : DataLoader<number, string | null> }
+  ) {
+
+
+    if (!product) {
+      console.log('Product is undefined!');
+      return null;
+    }
+
+    return productImage.load(product.product_id);
+  }
   @ResolveField(() => Int)
   async totalFeedbacks(@Parent() product: Product): Promise<number> {
     const stats = await this.feedbackService.getProductRatingStats(product.product_id);

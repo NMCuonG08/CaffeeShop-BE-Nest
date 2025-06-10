@@ -125,7 +125,15 @@ export class OrderService {
     const order = await this.prisma.order.findUnique({
       where: { id: id },
       include: {
-        items: { include: { product: true } },
+        items: { include: { product: {
+          include: {
+            product_image_cover : {
+              select: {
+                url: true
+              }
+            }
+          }
+            } } },
         user: { include: { userInfos: true } }
       }
     });

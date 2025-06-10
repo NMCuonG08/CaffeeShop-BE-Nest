@@ -97,7 +97,7 @@ export class FeedbackService {
     return feedback;
   }
 
-  // Lấy feedbacks theo product ID (cho DataLoader)
+
   async findByProductIds(productIds: number[]): Promise<Feedback[]> {
     return this.prisma.feedback.findMany({
       where: {

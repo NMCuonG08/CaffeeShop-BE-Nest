@@ -2,7 +2,7 @@ import { Field, Float, Int, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
 export class Product {
-  @Field(() => Int) // ✅ Dùng Int cho số nguyên
+  @Field(() => Int)
   product_id: number;
 
   @Field(() => String, { nullable: true })

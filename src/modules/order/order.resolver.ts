@@ -30,7 +30,6 @@ export class OrderResolver {
   @UseGuards(GqlAuthGuard)
   async findAll(
     @GetUserFromGQL("id") userId: number,
-    @Args('userId') id: number,
     @Args('status', { nullable: true }) status?: string,
     @Args('limit', { type: () => Int, nullable: true }) limit?: number,
     @Args('offset', { type: () => Int, nullable: true }) offset?: number,
