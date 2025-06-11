@@ -85,10 +85,10 @@ export class RedisService implements OnModuleInit {
     }
   }
 
-
-  // Wrapper method với auto-caching
+  // FIXED: Wrapper method với auto-caching - cache-manager v5 syntax
   async wrap<T>(key: string, fn: () => Promise<T>, ttl?: number): Promise<T> {
-    return await this.cacheManager.wrap(key, fn, { ttl: ttl ?? 0  });
+    // Cache-manager v5: wrap(key, fn, ttl) - no object wrapper
+    return await this.cacheManager.wrap(key, fn, ttl ?? 0);
   }
 
   // Utility methods
