@@ -43,13 +43,24 @@ export class VNPayController {
   ) {
     const result = this.vnpayService.verifyReturnUrl(query);
 
-    if (result.isValid) {
-      // Redirect đến trang thành công
-      return res.redirect(`${process.env.FRONTEND_URL}/payment/success?orderId=${query.vnp_TxnRef}`);
-    } else {
-      // Redirect đến trang thất bại
-      return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?orderId=${query.vnp_TxnRef}&message=${result.message}`);
-    }
+    // Tạo URL params từ VNPay query để chuyển đến frontend
+    const urlParams = new URLSearchParams();
+
+    // Chuyển tất cả VNPay parameters quan trọng
+    if (query.vnp_ResponseCode) urlParams.append('vnp_ResponseCode', query.vnp_ResponseCode);
+    if (query.vnp_TxnRef) urlParams.append('vnp_TxnRef', query.vnp_TxnRef);
+    if (query.vnp_Amount) urlParams.append('vnp_Amount', query.vnp_Amount.toString());
+    if (query.vnp_BankCode) urlParams.append('vnp_BankCode', query.vnp_BankCode);
+    if (query.vnp_PayDate) urlParams.append('vnp_PayDate', query.vnp_PayDate);
+    if (query.vnp_TransactionNo) urlParams.append('vnp_TransactionNo', query.vnp_TransactionNo);
+
+    // Luôn redirect đến vnpay-callback với tất cả parameters
+    // Frontend sẽ tự xử lý logic thành công/thất bại dựa trên vnp_ResponseCode
+    const callbackUrl = `${process.env.FRONTEND_URL}/payment/vnpay-callback?${urlParams.toString()}`;
+
+    console.log('VNPay callback redirect URL:', callbackUrl);
+
+    return res.redirect(callbackUrl);
   }
 
   @Get('ipn')

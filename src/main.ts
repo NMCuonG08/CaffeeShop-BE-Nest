@@ -37,7 +37,7 @@ async function bootstrap() {
   }
 
   // Use PORT from environment (Heroku sets this automatically)
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 3333;
   await app.listen(port, '0.0.0.0'); // Important: bind to 0.0.0.0 for Heroku
 
   console.log(`🚀 Application is running on: ${await app.getUrl()}`);

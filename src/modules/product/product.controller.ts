@@ -19,6 +19,7 @@ import { JWTGuard } from '../auth/guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { RedisService } from '@/shared/redis/redis.service';
 import { ProductSortBy } from '@/shared/enums';
+import { ApiQuery } from '@nestjs/swagger';
 
 @Controller("product")
 export class ProductController {
@@ -26,6 +27,12 @@ export class ProductController {
 
 
     @Get("/list")
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiQuery({ name: 'sortBy', enum: ProductSortBy, required: false })
+    @ApiQuery({ name: 'category', required: false, type: String })
+    @ApiQuery({ name: 'priceRange', required: false, type: String })
+    @ApiQuery({ name: 'search', required: false, type: String })
         async getAllProducts(
             @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
             @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
