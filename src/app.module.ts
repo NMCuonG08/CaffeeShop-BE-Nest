@@ -21,7 +21,8 @@ import { DataLoaderModule } from '@/shared/dataloader/dataloader.module'; // ←
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      // envFilePath: '.env',
+      ignoreEnvFile: true,
     }),
     DataLoaderModule,
     GraphQLModule.forRootAsync({
