@@ -7,7 +7,7 @@ COPY package*.json ./
 COPY tsconfig*.json ./
 
 # Install dependencies (include dev dependencies for build)
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY src/ ./src/
