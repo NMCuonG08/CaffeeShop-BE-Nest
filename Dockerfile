@@ -5,13 +5,13 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 COPY tsconfig*.json ./
-
+COPY prisma ./prisma/
 # Install dependencies (include dev dependencies for build)
 RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY src/ ./src/
-
+RUN npx prisma generate
 # Build application
 RUN npm run build
 
@@ -36,7 +36,8 @@ RUN npm ci --only=production && npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
-
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/prisma ./prisma/
 # Copy any additional files (configs, etc.)
 # COPY config/ ./config/
 
