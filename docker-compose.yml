@@ -8,13 +8,15 @@ services:
       target: production
     container_name: nestjs-production
     ports:
-      - "${PORT}:${PORT}"
+      - "3333:3333"
     env_file:
       - .env
     volumes:
+      # Mount logs directory (tùy chọn)
       - ./logs:/app/logs
     restart: unless-stopped
 
+    # Resource limits
     deploy:
       resources:
         limits:
@@ -24,6 +26,7 @@ services:
           memory: 512M
           cpus: '0.5'
 
+    # Health check
     healthcheck:
       test: ["CMD", "node", "healthcheck.js"]
       interval: 30s
@@ -31,29 +34,35 @@ services:
       retries: 3
       start_period: 40s
 
+    # Logging
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
 
+  # Nginx reverse proxy
   nginx:
     image: nginx:alpine
     container_name: nginx-proxy
     ports:
       - "80:80"
+      # - "443:443"  # Uncomment khi có SSL
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # - ./nginx/ssl:/etc/nginx/ssl:ro  # SSL certificates
     depends_on:
       - nestjs-app
     restart: unless-stopped
 
+    # Health check
     healthcheck:
       test: ["CMD", "nginx", "-t"]
       interval: 30s
       timeout: 10s
       retries: 3
 
+# Networks
 networks:
   default:
     name: nestjs-network
