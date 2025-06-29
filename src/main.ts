@@ -5,7 +5,10 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const httpAdapter = app.getHttpAdapter();
+  const instance = httpAdapter.getInstance();
 
+  instance.set('trust proxy', 1);
   // Global validation pipe
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
